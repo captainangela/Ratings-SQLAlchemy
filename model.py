@@ -23,9 +23,10 @@ class User(db.Model):
     age = db.Column(db.Integer, nullable=True)
     zipcode = db.Column(db.String(15), nullable=True)
 
-    def __init__(self, email=None, password=None):
-        self.password = password
-        self.email = email
+    # def __init__(self, email=None, password=None, age=None):
+    #     self.password = password
+    #     self.email = email
+    #     self.age = age
 
     def __repr__(self):
         """Provide helpful representation when printed."""

@@ -38,7 +38,6 @@ def user_list():
 @app.route('/registration-form', methods=['GET'])
 def registration_form():
     """Shows registration form."""
-       
 
     return render_template("registration_form.html")
 
@@ -51,12 +50,14 @@ def registration_process():
     password = request.form.get('password')
 
     if User.query.filter_by(email=email).first() is None:
-        db.session.add(User(email, password))
+        user = User(email=email,
+                    password=password)
+        db.session.add(user)
         db.session.commit()
         flash('You were successfully added')
     else:
         flash('Oops, you are already in the database! Try again.')
-        return render_template("registration_form.html")
+        return redirect('/registration-form')
 
     return redirect('/')
 
@@ -66,15 +67,21 @@ def login():
     """Allow user to login with password"""
 
     email = request.form.get('email')
-    #password = request.form.get('password')
+    password = request.form.get('password')
+
+    sys_email = User.query.filter_by(email=email).first()
 
     if request.method == 'POST':
-        if email == User.query.filter_by(email=email).first():
-           # (password == User.query.filter_by(password=password).first():
-            flash('You were successfully logged in')
-        else:
+        if sys_email is None:
             flash('Invalid credentials')
             return redirect('/login-form')
+        elif email == sys_email.email:
+            if password == sys_email.password:
+                flash('You were successfully logged in')
+                return redirect('/login-form')
+            else:
+                flash('That is not your password. Try again')
+                return redirect('/login-form')
 
     return render_template('login.html')
 
