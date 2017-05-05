@@ -8,17 +8,25 @@
   Ratings
   <hr>
 
-  {% block content %} put your content here 
+{% if "user_id" in session %}
+    <a href="/logout">Logout</a>
+{% else %}
+    <a href="/login-form">Login</a>
+{% endif %}
 
-   
+<hr>
 
-  {% endblock %}
-
-   <ul>
-      {% for message in get_flashed_messages() %}
+<ul>
+    {% for message in get_flashed_messages() %}
         <li>{{ message }}</li>
-      {% endfor %}
-    </ul>
-    
+    {% endfor %}
+</ul>
+
+
+{% block content %} 
+    put your content here 
+{% endblock %}
+
+
 </body>
 </html>

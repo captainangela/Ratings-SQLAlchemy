@@ -6,6 +6,7 @@ from flask import Flask, jsonify, render_template, redirect, request, flash, ses
 from flask_debugtoolbar import DebugToolbarExtension
 
 from model import connect_to_db, db, User, Rating, Movie
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -34,6 +35,82 @@ def user_list():
     users = User.query.all()
     return render_template("user_list.html", users=users)
 
+@app.route('/movies')
+def movie_list():
+    """Show list of movies."""
+
+    movies = Movie.query.all()
+    return render_template("movie_list.html", movies=movies)
+
+@app.route('/movies/<movie_id>', methods=['GET'])
+def movie_profile(movie_id):
+    """Lists Movie details"""
+
+    movie = Movie.query.get(movie_id)
+    user_id = session.get("user_id")
+
+    if user_id:
+        user_ratings = Rating.query.filter_by(movie_id=movie_id, user_id=user_id).first()
+    else:
+        user_ratings = None
+
+    movie_id = movie.movie_id
+    title = movie.title
+    release_date = datetime.strftime(movie.released_at, "%Y")
+
+    return render_template("movies.html",
+                            movie=movie,
+                            movie_id=movie_id,
+                            title=title,
+                            release_date=release_date,
+                            user_ratings=user_ratings)
+
+
+@app.route('/movies/<movie_id>', methods=['POST'])
+def movie_detail_process(movie_id):
+    """Add/edit a rating."""
+
+    # Get form variables
+    score = int(request.form["score"])
+
+    user_id = session.get("user_id")
+    if not user_id:
+        raise Exception("No user logged in.")
+
+    user_ratings = Rating.query.filter_by(user_id=user_id, movie_id=movie_id).first()
+
+    if user_ratings:
+        user_ratings.score = score
+        flash("Rating updated.")
+
+    else:
+        user_ratings = Rating(user_id=user_id, movie_id=movie_id, score=score)
+        flash("Rating added.")
+        db.session.add(user_ratings)
+
+    db.session.commit()
+
+    return redirect("/movies/%s" % movie_id)
+
+
+@app.route('/users/<user_id>')
+def user_profile(user_id):
+    """Lists user details"""
+    # user = User.query.get(user_id)
+    user = User.query.filter_by(user_id=user_id).all()
+    user_id = user[0].user_id
+    email = user[0].email
+    zipcode = user[0].zipcode
+    age = user[0].age
+    user_ratings = Rating.query.filter_by(user_id=user_id).all()
+
+    return render_template("user.html",
+                            email=email,
+                            age=age,
+                            zipcode=zipcode,
+                            user_ratings=user_ratings,
+                            user=user)
+
 
 @app.route('/registration-form', methods=['GET'])
 def registration_form():
@@ -48,10 +125,14 @@ def registration_process():
 
     email = request.form.get('email')
     password = request.form.get('password')
+    age = request.form.get('age')
+    zipcode = request.form.get('zipcode')
 
     if User.query.filter_by(email=email).first() is None:
         user = User(email=email,
-                    password=password)
+                    password=password,
+                    age=age,
+                    zipcode=zipcode)
         db.session.add(user)
         db.session.commit()
         flash('You were successfully added')
@@ -78,12 +159,22 @@ def login():
         elif email == sys_email.email:
             if password == sys_email.password:
                 flash('You were successfully logged in')
-                return redirect('/login-form')
+                session["user_id"] = sys_email.user_id
+                return redirect('/users/%s' % sys_email.user_id)
             else:
                 flash('That is not your password. Try again')
                 return redirect('/login-form')
 
     return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    """Log out."""
+
+    del session['user_id']
+    flash('Logged out.')
+    return redirect('/')
 
 
 if __name__ == "__main__":
